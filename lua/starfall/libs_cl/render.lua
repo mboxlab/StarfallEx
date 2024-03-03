@@ -7,7 +7,7 @@ local dgetmeta = debug.getmetatable
 local checkluatype = SF.CheckLuaType
 local haspermission = SF.Permissions.hasAccess
 local registerprivilege = SF.Permissions.registerPrivilege
-local col_meta = FindMetaTable("Color")
+local col_meta = getmetatable(Color(0,0,0,0))
 local col_SetUnpacked = col_meta.SetUnpacked
 local col_Unpack = col_meta.Unpack
 
