@@ -834,7 +834,7 @@ function Editor:InitComponents()
 			end
 		}, "DButton")
 
-	self.C.ButtonHolder = self:AddComponent(vgui.Create("DPanel", self), -400-4, 4, 400, 22) -- Upper menu
+	self.C.ButtonHolder = self:AddComponent(vgui.Create("DPanel", self), -500-4, 4, 500, 22) -- Upper menu
 	self.C.ButtonHolder.Paint = function() end
 	-- AddComponent( panel, x, y, w, h )
 	-- if x, y, w, h is minus, it will stay relative to right or buttom border
@@ -1924,6 +1924,23 @@ function Editor:Setup(nTitle, nLocation, nEditorType)
 	end
 	self.C.FontEditor = FontEditor
 
+	local rUpdater = vgui.Create("StarfallButton", self.C.ButtonHolder)
+	rUpdater:DockMargin(2, 0, 0, 0)
+	rUpdater:Dock(RIGHT)
+	rUpdater:SetText("Remote Updater")
+	rUpdater.DoClick = function()
+		if self.updater and self.updater:IsValid() then
+			self.updater:MakePopup() -- bring to front
+			return
+		end
+
+		self.updater = vgui.Create("StarfallRemoteUpdater")
+		self.updater:SetTitle( "Remote Updater" )
+		self.updater:SetSizable(true)
+		self.updater:SetDeleteOnClose(true)
+		self.updater:Open()
+	end
+	self.C.rUpdater = rUpdater
 
 	self:NewTab()
 	if Editor.OpenOldTabsVar:GetBool() then
