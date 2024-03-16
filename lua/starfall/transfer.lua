@@ -83,7 +83,8 @@ if SERVER then
 	util.AddNetworkString("starfall_upload")
 	util.AddNetworkString("starfall_upload_push")
 	util.AddNetworkString("starfall_error")
-
+	util.AddNetworkString("starfall_requestcode")
+	
 	function SF.SendStarfall(msg, sfdata, recipient, callback)
 		net.Start(msg)
 		net.WriteStarfall(sfdata, callback)
@@ -173,9 +174,71 @@ if SERVER then
 			sf:SetupFiles(sfdata)
 		end)
 	end)
+	local antispam = WireLib.RegisterPlayerTable()
+	-- Returns true if they are spamming, false if they can go ahead and use it
+	local function canhas(ply)
+		if not antispam[ply] then antispam[ply] = 0 end
+		if antispam[ply] < CurTime() then
+			antispam[ply] = CurTime() + 1
+			return false
+		else
+			WireLib.ClientError("This command has a 1 second anti spam protection. Try again in " .. math.Round(antispam[ply] - CurTime(), 2) .. " seconds.", ply)
+			return true
+		end
+	end
+	concommand.Add("sf_requestcode", function(player, command, args)
+		local ent = tonumber(args[1])
+		if not ent then return end
+		ent = Entity(ent)
+		if canhas(player) then return end
+		if not IsValid(ent) or ent:GetClass() ~= "starfall_processor" then return end
 
+		if WireLib.CanTool(player, ent, "starfall_processor") then
+			net.Start("starfall_requestcode")
+			net.WriteBool(true)
+			net.WriteStarfall(ent.sfdata)
+			net.Send(player)
+		end
+	end)
+	concommand.Add("sf_requestrestart", function(player, command, args)
+		local ent = tonumber(args[1])
+		if not ent then return end
+		ent = Entity(ent)
+		if canhas(player) then return end
+		if not IsValid(ent) or ent:GetClass() ~= "starfall_processor" then return end
+		local sfdata = ent.sfdata
+
+		if WireLib.CanTool(player, ent, "starfall_processor") then
+			if not (ent.Starfall and ent.instance) then return end
+
+			timer.Simple(0, function()
+				if IsValid(ent) then
+					ent:SetupFiles(ent.sfdata)
+				end
+			end)
+		end
+	end)
 else
 
+	net.Receive("starfall_requestcode", function(len, ply)
+		SF.Editor.open()
+		
+		if net.ReadBool() then
+			net.ReadStarfall(nil, function(ok, sfdata)
+				if ok then
+					local mainfile = sfdata.files[sfdata.mainfile]
+					sfdata.files[sfdata.mainfile] = nil
+					for filename, code in pairs(sfdata.files) do
+						SF.Editor.openWithCode(filename, code, nil, true)
+					end
+					-- Add mainfile last so it gets focus
+					SF.Editor.openWithCode(sfdata.mainfile, mainfile, nil, false)
+				else
+					SF.AddNotify(LocalPlayer(), "Error downloading SF code. ("..sfdata..")", "ERROR", 7, "ERROR1")
+				end
+			end)
+		end
+	end)
 	-- Sends starfall files to server
 	function SF.SendStarfall(msg, sfdata, callback)
 		net.Start(msg)
@@ -236,5 +299,12 @@ else
 				SF.AddNotify(LocalPlayer(), err, "ERROR", 7, "ERROR1")
 			end
 		)
+	end)
+	concommand.Add("starfall_remoteupdater",function()
+		local updater = vgui.Create("StarfallRemoteUpdater")
+		updater:SetTitle( "Remote Updater" )
+		updater:SetSizable(true)
+		updater:SetDeleteOnClose(true)
+		updater:Open()
 	end)
 end

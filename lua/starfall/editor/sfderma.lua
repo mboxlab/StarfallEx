@@ -1484,3 +1484,106 @@ function PANEL:Init()
 end
 
 vgui.Register( "StarfallFontPicker", PANEL, "StarfallFrame" )
+
+
+function PANEL:Init()
+
+	self:SetSize(math.min(ScrW()*0.9,512),math.min(ScrH(),1024))
+	self:Center()
+	self.tabPanel = vgui.Create("DScrollPanel", self)
+	self.tabPanel:Dock(FILL)
+	local theme = SF.Editor.Themes.CurrentTheme
+	local tabPanel = self.tabPanel
+	for k, v in ipairs(ents.FindByClass("starfall_processor")) do
+
+		local bg = vgui.Create("StarfallPanel")
+		bg.PerformLayout = nil
+		bg:SetSize(200, 64 + 12)
+		bg:Dock(TOP)
+		bg:DockMargin(2, 2, 2, 2)
+		bg:SetBackgroundColor(theme.background)
+		
+		local label = vgui.Create("DLabel", bg)
+		function label:Think()
+			if not IsValid(v) then
+				return
+			end
+			local name = v.name or "Generic ( No-Name )"
+
+			local singleline = string.match( name, "(.-)\n" )
+			if singleline then name = singleline .. "..." end
+
+			local max = 20
+			if #name > max then name = string.sub(name,1,max) .. "..." end
+
+			local idx = v:EntIndex()
+
+			local ownerStr = "Owner: " .. (v:CPPIGetOwner():GetName() or "")
+
+			local clientstr, serverstr
+			local state = v:GetNWInt("State", 1)
+			if v.instance then
+				local bufferAvg = v.instance.cpu_average
+				clientstr = tostring(math.Round(bufferAvg * 1000000)) .. "us. (" .. tostring(math.floor(bufferAvg / v.instance.cpuQuota * 100)) .. "%)"
+			elseif v.error then
+				clientstr = "Errored / Terminated"
+			else
+				clientstr = "None"
+			end
+			if state == 1 then
+				serverstr = tostring(v:GetNWInt("CPUus", 0)) .. "us. (" .. tostring(v:GetNWFloat("CPUpercent", 0)) .. "%)"
+			elseif state == 2 then
+				serverstr = "Errored"
+			else
+				serverstr = "None"
+			end
+			label:SetText(string.format("Name: %s\nEntity ID: '%d'\nServer CPU: %s\nClient CPU: %s\n%s", name, idx, serverstr, clientstr, ownerStr))
+		end
+		label:Think()
+		label:SetPos(4, 4)
+		label:SizeToContents()
+		label:SetWide(280)
+		label:SetWrap(true)
+		-- :<
+		local btn = vgui.Create("StarfallButton", bg)
+		btn:SetText("Upload")
+		btn:SetSize(57, 18)
+		timer.Simple(0, function() btn:SetPos(bg:GetWide() - btn:GetWide() * 2 - 20, 4) end)
+		btn.DoClick = function(pnl)
+			SF.Editor.BuildIncludesTable(SF.Editor.getOpenFile(), function(list)
+				if not IsValid(v) then return end
+				SF.PushStarfall(v, {files = list.files, mainfile = v.sfdata.mainfile})
+			end,
+			function(err)
+				SF.AddNotify(LocalPlayer(), err, "ERROR", 7, "ERROR1")
+			end)
+		end
+
+		local btn = vgui.Create("StarfallButton", bg)
+		btn:SetText("Download")
+		btn:SetSize(57, 18)
+		timer.Simple(0, function() btn:SetPos(bg:GetWide() - btn:GetWide() - 4, 4) end)
+		btn.DoClick = function(pnl)
+			RunConsoleCommand("sf_requestcode", v:EntIndex())
+		end
+
+		local Halt = vgui.Create("StarfallButton", bg)
+		Halt:SetText("Halt execution")
+		Halt:SetSize(57, 18)
+		timer.Simple(0, function() Halt:SetPos(bg:GetWide() - Halt:GetWide() - 4, 24) end)
+		Halt.DoClick = function(pnl)
+			if not IsValid(v) then return end
+			v:Error( { message = "Killed by user", traceback = "" } )
+		end
+
+		local btn = vgui.Create("StarfallButton", bg)
+		btn:SetText("Reset")
+		btn:SetSize(57, 18)
+		timer.Simple(0, function() btn:SetPos(bg:GetWide() - Halt:GetWide() - btn:GetWide() - 6, 24) end)
+		btn.DoClick = function(pnl)
+			RunConsoleCommand("sf_requestrestart", v:EntIndex())
+		end
+		tabPanel:Add(bg)
+	end
+end
+vgui.Register( "StarfallRemoteUpdater", PANEL, "StarfallFrame" )
