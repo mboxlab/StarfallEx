@@ -1485,6 +1485,7 @@ end
 
 vgui.Register( "StarfallFontPicker", PANEL, "StarfallFrame" )
 
+PANEL = {}
 
 function PANEL:Init()
 
