@@ -75,7 +75,7 @@ if CLIENT then
 		return playerAnimation[ply]
 	end
 
-	playerAnimation = SF.EntityTable("playerAnimation", playerAnimRemove, true)
+	playerAnimation = SF.EntityTable("playerAnimation", playerAnimRemove)
 end
 
 --- Player type
@@ -496,6 +496,14 @@ end
 -- @return boolean Whether they are sprinting
 function player_methods:isSprinting()
 	return getply(self):IsSprinting()
+end
+
+--- Returns whether the player is walking
+-- In singleplayer, this will return false clientside
+-- @shared
+-- @return boolean Whether they are walking
+function player_methods:isWalking()
+	return getply(self):IsWalking()
 end
 
 --- Gets the player's death ragdoll
