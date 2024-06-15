@@ -90,18 +90,26 @@ hook.Add("InitPostEntity","SF_SanitizeTypeMetatables",function()
 end)
 
 local removedHooks = setmetatable({}, {__index=function(t,k) local r={} t[k]=r return r end})
-hook.Add("EntityRemoved","SF_CallOnRemove",function(ent, fullsnapshot)
-	if fullsnapshot then return end
+hook.Add("EntityRemoved","SF_CallOnRemove",function(ent)
 	local hooks = removedHooks[ent]
 	if hooks then
 		for k, v in pairs(hooks) do
-			v(ent)
+			if v[1] then v[1](ent) end
+		end
+		if CLIENT then
+			timer.Simple(0, function()
+				if not IsValid(ent) then
+					for k, v in pairs(hooks) do
+						if v[2] then v[2](ent) end
+					end
+				end
+			end)
 		end
 		removedHooks[ent] = nil
 	end
 end)
-function SF.CallOnRemove(ent, key, func)
-	removedHooks[ent][key] = func
+function SF.CallOnRemove(ent, key, func, deferedfunc)
+	removedHooks[ent][key] = {func, deferedfunc}
 end
 function SF.RemoveCallOnRemove(ent, key)
 	removedHooks[ent][key] = nil
@@ -113,17 +121,22 @@ end
 -------------------------------------------------------------------------------
 
 -- Returns a class that manages a table of entity keys
-function SF.EntityTable(key, destructor)
+function SF.EntityTable(key, destructor, dontwait)
 	return setmetatable({}, {
 		__newindex = function(t, e, v)
 			rawset(t, e, v)
 			if e ~= SF.Superuser then
-				SF.CallOnRemove(e, key, function()
+				local function ondestroy()
 					if t[e] then
 						if destructor then destructor(e, v) end
 						t[e] = nil
 					end
-				end)
+				end
+				if SERVER or dontwait then
+					SF.CallOnRemove(e, key, ondestroy)
+				else
+					SF.CallOnRemove(e, key, nil, ondestroy)
+				end
 			end
 		end
 	})
@@ -312,7 +325,8 @@ SF.EntManager = {
 			self:free(instance.player, -1)
 		end,
 		remove = function(self, instance, ent)
-			if not IsValid(ent) then return end
+			-- ent:IsValid() used since not all types this class supports are entity
+			if not (ent and ent:IsValid()) then return end
 			if self.nocallonremove then
 				self:onremove(instance, ent)
 			else

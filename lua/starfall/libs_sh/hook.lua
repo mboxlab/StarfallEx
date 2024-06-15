@@ -382,6 +382,24 @@ add("PlayerFootstep", nil, function(instance, ply, pos, foot, sound, volume)
     }
 end, returnOnlyOnYourself )
 
+--- Called when a player jumps.
+-- @name OnPlayerJump
+-- @class hook
+-- @shared
+-- @param Player ply Player who jumped
+-- @param number speed The velocity/impulse of the jump
+add("OnPlayerJump")
+
+--- Called when a player makes contact with the ground after a jump or a fall.
+-- @name OnPlayerHitGround
+-- @class hook
+-- @shared
+-- @param Player ply Player that hit the ground
+-- @param boolean inWater Did the player land in water?
+-- @param boolean onFloater Did the player land on an object floating in the water?
+-- @param number speed The speed at which the player hit the ground
+add("OnPlayerHitGround")
+
 --- Called when a player presses a key
 -- @name KeyPress
 -- @class hook
@@ -470,7 +488,7 @@ end)
 -- @class hook
 -- @shared
 -- @param Entity ent Entity being removed
--- @param boolean isSnapshot If clientside, will be true if the entity isn't actually removed
+-- @param boolean fullupdate If clientside, will be true if the entity was removed by a fullupdate
 add("EntityRemoved")
 
 --- Called when an entity is broken
