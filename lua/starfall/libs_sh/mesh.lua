@@ -882,6 +882,10 @@ if CLIENT then
 		return wrap(mesh)
 	end
 
+	if util.IsBinaryModuleInstalled("obj_parser_rs") then
+		require("obj_parser_rs")
+	end
+
 	--- Creates a mesh from an obj file. Only supports triangular meshes with normals and texture coordinates.
 	-- @param string obj The obj file data
 	-- @param boolean? threaded Optional bool, use threading object that can be used to load the mesh over time to prevent hitting quota limit
@@ -894,13 +898,17 @@ if CLIENT then
 		if triangulate ~= nil then checkluatype(triangulate, TYPE_BOOL) end
 
 		checkpermission (instance, nil, "mesh")
-
-		local meshes = SF.ParseObj(obj, threaded and thread_yield, Vector, triangulate)
+		local parser = ObjParserRS and ObjParserRS.parseWithoutEdit or SF.ParseObj
+		local meshes = parser(obj, threaded and thread_yield, Vector, triangulate)
 		for name, vertices in pairs(meshes) do
 			if #vertices > 65535 then SF.Throw("The max number of vertices for a mesh is 65535." .. " (" .. name .. ": " .. #vertices .. ")", 2) end
 			local ntriangles = #vertices / 3
 			plyTriangleCount:use(instance.player, ntriangles)
 			plyMeshCount:use(instance.player, 1)
+
+			if ObjParserRS then
+				SF.GenerateTangents(vertices, threaded and thread_yield, Vector)
+			end
 
 			local mesh = Mesh()
 			mesh:BuildFromTriangles(vertices)
