@@ -122,32 +122,21 @@ end
 
 function ENT:Error(err)
 	self.error = err
-
-	local msg = err.message
-	local traceback = err.traceback
-
-	if SERVER then
-		self:SetNWInt("State", self.States.Error)
-		self:SetColor(Color(255, 0, 0, 255))
-		self:SetDTString(0, traceback or msg)
-	end
-
-	local newline = string.find(msg, "\n")
-	if newline then
-		msg = string.sub(msg, 1, newline - 1)
-	end
-
-	hook.Run("StarfallError", self, self.owner, CLIENT and LocalPlayer() or false, self.sfdata and self.sfdata.mainfile or "", msg, traceback)
-	SF.SendError(self, msg, traceback)
-
 	if self.instance then
 		self.instance:deinitialize()
 		self.instance = nil
 	end
 
-	for inst, _ in pairs(SF.allInstances) do
-		inst:runScriptHook("starfallerror", inst.Types.Entity.Wrap(self), inst.Types.Player.Wrap(SERVER and self.owner or LocalPlayer()), msg)
+	local msg = string.match(err.message, "[^\n]+") or ""
+	local traceback = err.traceback
+
+	if SERVER then
+		self:SetNWInt("State", self.States.Error)
+		self:SetColor(Color(255, 0, 0, 255))
 	end
+
+	hook.Run("StarfallError", self, self.owner, CLIENT and LocalPlayer() or false, self.sfdata and self.sfdata.mainfile or "", msg, traceback)
+	SF.SendError(self, msg, traceback)
 end
 
 local function MenuOpen( ContextMenu, Option, Entity, Trace )

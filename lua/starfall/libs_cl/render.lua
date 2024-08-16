@@ -468,7 +468,6 @@ end)
 
 function instance:prepareRender()
 	col_SetUnpacked(currentcolor, 255, 255, 255, 255)
-	circleMeshMatrix:Identity()
 	render.SetColorMaterial()
 	draw.NoTexture()
 	surface.SetDrawColor(255, 255, 255, 255)
@@ -1438,6 +1437,8 @@ function render_library.drawFilledCircle(x, y, radius)
 	render_SetMaterial(circleMeshMaterial)
 
 	if x ~= 0 or y ~= 0 or radius ~= 1 then
+		circleMeshMatrix:Identity()
+
 		vec_SetUnpacked(circleMeshVector, x, y, 0)
 		circleMeshMatrix:SetTranslation(circleMeshVector)
 
@@ -1864,6 +1865,24 @@ function render_library.drawSimpleText(x, y, text, xalign, yalign)
 	local font = renderdata.font or defaultFont
 
 	return draw.SimpleText(text, font, x, y, currentcolor, xalign, yalign)
+end
+
+--- Draws outlined text more easily but no new lines or tabs.
+-- @param number x X coordinate
+-- @param number y Y coordinate
+-- @param string text Text to draw
+-- @param number outlinewidth Width of the outline.
+-- @param Color outlinecolor The color of the text.
+-- @param number? xalign Horizontal text alignment. Default TEXT_ALIGN.LEFT
+-- @param number? yalign Vertical text alignment. Default TEXT_ALIGN.TOP
+-- @return number Width of the drawn text. Same as calling render.getTextSize
+-- @return number Height of the drawn text. Same as calling render.getTextSize
+function render_library.drawSimpleTextOutlined(x, y, text, outlinewidth, outlinecolor, xalign, yalign)
+	if not renderdata.isRendering then SF.Throw("Not in rendering hook.", 2) end
+
+	local font = renderdata.font or defaultFont
+
+	return draw.SimpleTextOutlined( text, font, x, y, currentcolor, xalign, yalign, outlinewidth, outlinecolor )
 end
 
 --- Constructs a markup object for quick styled text drawing.

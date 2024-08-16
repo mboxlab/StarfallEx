@@ -21,10 +21,10 @@ function net.ReadStarfall(ply, callback)
 				sfdata.files = files
 				callback(true, sfdata)
 			else
-				callback(false, files)
+				callback(false, sfdata, files)
 			end
 		else
-			callback(false, "Net timeout")
+			callback(false, sfdata, "Net timeout")
 		end
 	end)
 
@@ -115,20 +115,40 @@ if SERVER then
 	end
 
 	function SF.SendError(chip, message, traceback, client, should_notify)
+		if not IsValid(chip.owner) then return end
+
+		-- The chip owner gets more data
+		if client~=chip.owner then
+			net.Start("starfall_error")
+				net.WriteEntity(chip)
+				net.WriteEntity(chip.owner)
+				net.WriteString(string.sub(chip.sfdata.mainfile, 1, 1024))
+				net.WriteString(string.sub(message, 1, 1024))
+				net.WriteString(string.sub(traceback, 1, 1024))
+			if client~=nil and should_notify~=nil then
+				net.WriteBool(true)
+				net.WriteEntity(client)
+				net.WriteBool(should_notify)
+			else
+				net.WriteBool(false)
+			end
+			net.Send(chip.owner)
+		end
+
 		net.Start("starfall_error")
 			net.WriteEntity(chip)
 			net.WriteEntity(chip.owner)
-			net.WriteString(string.sub(chip.sfdata.mainfile, 1, 1024))
-			net.WriteString(string.sub(message, 1, 1024))
-			net.WriteString(string.sub(traceback, 1, 1024))
+			net.WriteString(string.sub(chip.sfdata.mainfile, 1, 128))
+			net.WriteString(string.sub(message, 1, 128))
+			net.WriteString("")
 		if client~=nil and should_notify~=nil then
 			net.WriteBool(true)
 			net.WriteEntity(client)
 			net.WriteBool(should_notify)
-			net.SendOmit(client)
+			net.SendOmit({client, chip.owner})
 		else
 			net.WriteBool(false)
-			net.Broadcast()
+			net.SendOmit(chip.owner)
 		end
 	end
 
@@ -152,15 +172,15 @@ if SERVER then
 
 		updata.reading = true
 
-		net.ReadStarfall(ply, function(ok, sfdata)
+		net.ReadStarfall(ply, function(ok, sfdata, err)
 			if ok then
 				if #sfdata.mainfile > 0 then
 					sfdata.owner = ply
 					updata.callback(sfdata)
 				end
 			else
-				if uploaddata[ply]==updata then
-					SF.AddNotify(ply, "There was a problem uploading your code ("..sfdata.."). Try again in a second.", "ERROR", 7, "ERROR1")
+				if uploaddata[ply] == updata then
+					SF.AddNotify(ply, "There was a problem uploading your code (" .. err .. "). Try again in a second.", "ERROR", 7, "ERROR1")
 				end
 			end
 			uploaddata[ply] = nil
